@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Ride Weather</string>
+    <string name="tile_label">Ride Weather</string>
+    <string name="tile_description">Round-trip motorcycle weather advice.</string>
+</resources>

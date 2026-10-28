@@ -1,0 +1,17 @@
+.tools/
+.gradle/
+**/build/
+local.properties
+.kotlin/
+.idea/
+
+# Local visual mockups and source artwork, not needed to build the app
+/ride-status-icon-concepts.*
+/ride-weather-dashboard-preview.png
+/ride-weather-main-preview.*
+/ride-weather-preview.*
+/route-settings-preview.*
+/Sunny Ride vs. Rainy No-Go.png
+
+# Staged separately as a GitHub release asset
+/release-assets/

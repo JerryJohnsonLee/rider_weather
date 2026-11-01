@@ -21,9 +21,11 @@ import java.util.Date
 import java.util.concurrent.TimeUnit
 
 internal object DailyForecastScheduler {
-    private const val UNIQUE_WORK = "ride_weather_daily_8am"
+    private const val LEGACY_WORK = "ride_weather_daily_8am"
+    private const val UNIQUE_WORK = "ride_weather_daily_updates"
 
     fun ensureScheduled(context: Context) {
+        WorkManager.getInstance(context.applicationContext).cancelUniqueWork(LEGACY_WORK)
         enqueue(context, ExistingWorkPolicy.KEEP)
     }
 
@@ -33,8 +35,10 @@ internal object DailyForecastScheduler {
 
     private fun enqueue(context: Context, policy: ExistingWorkPolicy) {
         val now = ZonedDateTime.now()
-        var nextRun = now.withHour(8).withMinute(0).withSecond(0).withNano(0)
-        if (!nextRun.isAfter(now)) nextRun = nextRun.plusDays(1)
+        val nextRun = listOf(8, 15)
+            .map { hour -> now.withHour(hour).withMinute(0).withSecond(0).withNano(0) }
+            .firstOrNull { it.isAfter(now) }
+            ?: now.plusDays(1).withHour(8).withMinute(0).withSecond(0).withNano(0)
         val delay = Duration.between(now, nextRun).toMillis().coerceAtLeast(1)
         val request = OneTimeWorkRequestBuilder<DailyForecastWorker>()
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)

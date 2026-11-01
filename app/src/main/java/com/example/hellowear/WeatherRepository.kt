@@ -30,6 +30,8 @@ internal data class WeatherSnapshot(
 )
 
 internal object WeatherRepository {
+    private const val RAIN_NO_RIDE_THRESHOLD = 30
+
     fun fetchToday(stops: List<RouteStop>): WeatherSnapshot {
         val today = LocalDate.now()
         val forecasts = stops.map { stop ->
@@ -39,15 +41,16 @@ internal object WeatherRepository {
         val outbound = forecasts.map { (stop, json) -> sample(json, stop.place, today, stop.outbound) }
         val returning = forecasts.asReversed().map { (stop, json) -> sample(json, stop.place, today, stop.returning) }
         val rainCandidate = (outbound.map { it to false } + returning.map { it to true })
-            .filter { it.first.rainChance > 0 }.maxByOrNull { it.first.rainChance }
+            .filter { it.first.rainChance >= RAIN_NO_RIDE_THRESHOLD }.maxByOrNull { it.first.rainChance }
         val all = outbound + returning
         val rainPoint = rainCandidate?.first
         val recommendation = if (rainPoint == null) "RIDE LOOKS OK" else "NO RIDE TODAY"
         val reason = if (rainPoint == null) {
             val windy = all.maxByOrNull { it.gustMph }!!
-            "No rain chance at planned stops. Gusts reach ${windy.gustMph.toInt()} mph near ${windy.place}; check conditions again before leaving."
+            val highestRain = all.maxByOrNull { it.rainChance }!!
+            "Rain stays below 30% on both legs (highest ${highestRain.rainChance}% near ${highestRain.place}). Gusts reach ${windy.gustMph.toInt()} mph; check conditions again before leaving."
         } else {
-            "${rainPoint.rainChance}% rain chance at ${rainPoint.place} at ${rainPoint.time} on the ${if (rainCandidate!!.second) "return" else "outbound"} leg. Any rain chance on either leg vetoes the ride."
+            "${rainPoint.rainChance}% rain chance at ${rainPoint.place} at ${rainPoint.time} on the ${if (rainCandidate!!.second) "return" else "outbound"} leg. 30% or higher on either leg means no ride today."
         }
         val coldest = all.minByOrNull { it.feelsLikeF }!!
         val hottest = all.maxByOrNull { it.feelsLikeF }!!

@@ -77,7 +77,8 @@ The debug APK is written to `app\build\outputs\apk\debug\app-debug.apk`.
 - The app samples the forecast at each stop’s planned outbound and return time. It does not calculate a road route or travel time.
 - The recommendation checks both legs. Any sampled precipitation probability above 0% means **NO RIDE TODAY**.
 - Temperature uses the selected °C/°F display unit. Wind and gusts are shown in mph.
-- Forecasts refresh manually or around 8:00 AM watch-local time when the watch has internet. WorkManager may delay background updates for network or battery conditions.
+- Forecasts refresh manually and around 8:00 AM and 3:00 PM watch-local time when the watch has internet. WorkManager may delay background updates for network or battery conditions.
+- A 30% or higher precipitation chance at any planned stop on either leg marks the full round trip as no-ride. Lower chances are allowed; snapshots from an earlier date are labeled **Outdated** in the app and tile.
 
 ## References
 

@@ -19,6 +19,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.text.DateFormat
+import java.time.Instant
+import java.time.ZoneId
 import java.util.concurrent.Executors
 
 class MainActivity : Activity() {
@@ -67,7 +69,7 @@ class MainActivity : Activity() {
         }
         root.addView(statusCard, cardLayout())
         reasonText = addText("", 13f, 0xFFE5EAE7.toInt(), top = 4, bottom = 5)
-        updatedText = addText("Not updated yet · daily refresh around 8 AM", 11f, 0xFF9EAAA5.toInt(), top = 1, bottom = 7)
+        updatedText = addText("Not updated yet · refreshes at 8 AM and 3 PM", 11f, 0xFF9EAAA5.toInt(), top = 1, bottom = 7)
         updateButton = Button(this).apply {
             text = "Update now"
             setOnClickListener { updateNow() }
@@ -177,10 +179,11 @@ class MainActivity : Activity() {
     private fun loadTodaySnapshot(): WeatherSnapshot? {
         val prefs = getSharedPreferences("ride_weather", MODE_PRIVATE)
         val json = prefs.getString("today_snapshot", null) ?: return null
-        return try {
-            WeatherRepository.decode(json).takeIf { it.date == LocalDate.now().toString() }
-        } catch (_: Exception) { null }
+        return try { WeatherRepository.decode(json) } catch (_: Exception) { null }
     }
+
+    private fun isOutdated(snapshot: WeatherSnapshot): Boolean =
+        Instant.ofEpochMilli(snapshot.updatedAt).atZone(ZoneId.systemDefault()).toLocalDate() != LocalDate.now()
 
     private fun renderSnapshot(snapshot: WeatherSnapshot?) {
         charts.removeAllViews()
@@ -190,7 +193,7 @@ class MainActivity : Activity() {
             statusCard.background = rounded(0xFF242A2D.toInt(), 18)
             statusCard.setTextColor(0xFFE0E7E3.toInt())
             reasonText.text = "Tap Update now to check the planned round trip."
-            updatedText.text = "Not updated yet · daily refresh around 8 AM"
+            updatedText.text = "Not updated yet · refreshes at 8 AM and 3 PM"
             clothingText.visibility = View.GONE
             emptyText.visibility = if (readStopsOrEmpty()) View.GONE else View.VISIBLE
             if (emptyText.visibility == View.VISIBLE) emptyText.text = "Set up your route in Settings, then update today’s forecast."
@@ -205,7 +208,12 @@ class MainActivity : Activity() {
         statusCard.setTextColor(if (unsafe) 0xFFFFB4AB.toInt() else 0xFF9AF0CE.toInt())
         reasonText.text = snapshot.reason
         val time = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(snapshot.updatedAt))
-        updatedText.text = "Updated $time · daily refresh around 8 AM"
+        updatedText.text = if (isOutdated(snapshot)) {
+            val lastUpdated = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(snapshot.updatedAt))
+            "Outdated · last updated $lastUpdated · refreshes at 8 AM and 3 PM"
+        } else {
+            "Updated $time · refreshes at 8 AM and 3 PM"
+        }
         clothingText.visibility = View.VISIBLE
         clothingText.text = "WHAT TO WEAR\n${snapshot.clothing}"
         addRouteCharts(snapshot)

@@ -20,13 +20,26 @@ import androidx.wear.protolayout.types.layoutString
 import androidx.wear.tiles.Material3TileService
 import androidx.wear.tiles.RequestBuilders.TileRequest
 import androidx.wear.tiles.TileBuilders.Tile
+import java.text.DateFormat
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Date
 
 class HelloWorldTileService : Material3TileService() {
     override suspend fun MaterialScope.tileResponse(requestParams: TileRequest): Tile {
         val prefs = applicationContext.getSharedPreferences("ride_weather", MODE_PRIVATE)
         val recommendation = prefs.getString("recommendation", "NO FORECAST") ?: "NO FORECAST"
-        val updated = prefs.getString("updated_label", "Not updated") ?: "Not updated"
-        val updateLine = if (updated == "Not updated") "Not updated" else "Updated $updated"
+        val snapshot = prefs.getString("today_snapshot", null)?.let {
+            try { WeatherRepository.decode(it) } catch (_: Exception) { null }
+        }
+        val updateLine = if (snapshot == null) {
+            "Not updated"
+        } else {
+            val updated = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(snapshot.updatedAt))
+            val isOutdated = Instant.ofEpochMilli(snapshot.updatedAt).atZone(ZoneId.systemDefault()).toLocalDate() != LocalDate.now()
+            if (isOutdated) "Outdated · $updated" else "Updated $updated"
+        }
         val icon = when {
             recommendation.startsWith("NO RIDE") -> R.drawable.no_ride
             recommendation.startsWith("RIDE LOOKS") -> R.drawable.ride_ok
